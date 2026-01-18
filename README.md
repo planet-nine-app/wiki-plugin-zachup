@@ -1,0 +1,228 @@
+# Federated Wiki - Zachup Backup Plugin
+
+The Zachup plugin automatically backs up all pages in your federated wiki to a BDO (Big Dumb Object) instance at regular intervals.
+
+## Features
+
+- **Automatic Backups**: Backs up all wiki pages once per day
+- **Startup Backup**: Performs an initial backup when the server starts
+- **Manual Backup**: Trigger backups manually through the plugin interface
+- **BDO Storage**: Stores backups using the BDO protocol for secure, distributed storage
+- **Status Monitoring**: View backup status including last backup time and next scheduled backup
+
+## Installation
+
+1. Install the plugin in your federated wiki:
+   ```bash
+   npm install wiki-plugin-zachup
+   ```
+
+2. The plugin will automatically generate and save its encryption keys on first launch
+
+## Usage
+
+### Configuration
+
+The plugin requires no command-line arguments. Configuration is done through the web UI:
+
+```bash
+wiki
+```
+
+On first startup, the plugin will:
+1. Generate a new Sessionless keypair automatically
+2. Save the keys to `zachup-keys.json` in the plugin directory
+3. Wait for you to configure the BDO server URL through the UI
+
+**Important Security Notes**:
+- The `zachup-keys.json` file contains your private key. Keep it secure and back it up!
+- The `zachup-config.json` file contains your BDO server URL configuration
+
+### Adding the Plugin to a Page
+
+In your wiki page, add a Zachup plugin item to configure and monitor backups:
+
+1. Click to add a new item
+2. Select "Zachup Backup Plugin" from the factory
+3. **First Time Setup**: Enter your BDO server URL (e.g., `http://localhost:3003/`) and click "Save Configuration"
+4. **After Configuration**: The plugin will display:
+   - BDO Server URL
+   - BDO User UUID
+   - Public Key (with copy button)
+   - Last backup timestamp
+   - Next scheduled backup time
+   - "Backup Now" button for manual backups
+   - "Get Curl Command" button to generate a curl command for retrieving your backup
+   - "Reconfigure" button to change BDO server URL
+
+### Backup Schedule
+
+- **Initial Backup**: 5 seconds after BDO URL is configured
+- **Regular Backups**: Every 24 hours (only after configuration)
+- **Manual Backups**: Any time via the "Backup Now" button
+
+**Note**: No backups will occur until you configure the BDO server URL through the UI.
+
+## What Gets Backed Up
+
+The plugin backs up:
+- All wiki pages in JSON format
+- Page metadata (title, slug, date, synopsis)
+- Complete page content (story and journal)
+
+The backup is stored in BDO with the hash `wiki-zachup-backup` and includes:
+- Timestamp of the backup
+- Count of pages backed up
+- Complete page data indexed by slug
+
+## API Endpoints
+
+The plugin provides the following endpoints:
+
+### GET `/plugin/zachup/config`
+
+Returns the current configuration status:
+
+```json
+{
+  "configured": true,
+  "bdoUrl": "http://localhost:3003/"
+}
+```
+
+### POST `/plugin/zachup/config`
+
+Sets the BDO server URL and initializes backups:
+
+**Request:**
+```json
+{
+  "bdoUrl": "http://localhost:3003/"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "configured": true,
+  "bdoUrl": "http://localhost:3003/",
+  "bdoUser": "user-uuid-here"
+}
+```
+
+### GET `/plugin/zachup/pubkey`
+
+Returns the plugin's public key:
+
+```json
+{
+  "pubKey": "02a1b2c3d4e5f6..."
+}
+```
+
+### GET `/plugin/zachup/status`
+
+Returns the current backup status:
+
+```json
+{
+  "configured": true,
+  "bdoUrl": "http://localhost:3003/",
+  "lastBackup": "2025-01-16T22:00:00.000Z",
+  "bdoUser": "user-uuid-here",
+  "pubKey": "02a1b2c3d4e5f6...",
+  "nextBackup": "2025-01-17T22:00:00.000Z"
+}
+```
+
+### POST `/plugin/zachup/backup-now`
+
+Triggers an immediate backup (requires configuration first):
+
+```json
+{
+  "success": true,
+  "message": "Backup initiated",
+  "timestamp": "2025-01-16T22:30:00.000Z"
+}
+```
+
+If not configured:
+```json
+{
+  "success": false,
+  "error": "BDO not configured. Please configure BDO URL first."
+}
+```
+
+### GET `/plugin/zachup/get-curl`
+
+Generates a signed curl command for retrieving the backup from BDO:
+
+```json
+{
+  "success": true,
+  "curlCommand": "curl \"http://localhost:3003/user/abc123.../bdo?timestamp=1234567890&hash=wiki-zachup-backup&signature=...\"",
+  "bdoUrl": "http://localhost:3003/",
+  "uuid": "abc123...",
+  "hash": "wiki-zachup-backup"
+}
+```
+
+The generated curl command includes a valid signature and can be run directly in a terminal to retrieve the backup.
+
+## Retrieving Backups
+
+### Using the Curl Command (Easiest)
+
+The plugin provides a "Get Curl Command" button that generates a ready-to-use curl command with proper authentication:
+
+1. Click "Get Curl Command" in the plugin UI
+2. Copy the generated command
+3. Run it in your terminal to download your backup
+
+Example output:
+```bash
+curl "http://localhost:3003/user/abc123.../bdo?timestamp=1234567890&hash=wiki-zachup-backup&signature=..."
+```
+
+The curl command includes a signed timestamp that's valid for a limited time. Simply run the command to retrieve your backup as JSON.
+
+### Using the BDO Client Library
+
+Alternatively, use the BDO client with your UUID and the hash `wiki-zachup-backup`:
+
+```javascript
+import bdo from 'bdo-js';
+
+const backupData = await bdo.getBDO(userUUID, 'wiki-zachup-backup');
+console.log(backupData.pages); // All your wiki pages
+```
+
+## Troubleshooting
+
+### Backup not starting
+
+Check that:
+1. Your private_key and pub_key are correctly configured
+2. The BDO server is running and accessible at the configured URL
+3. Check server logs for error messages
+
+### BDO connection errors
+
+- Verify the BDO server URL is correct
+- Ensure the BDO server is running
+- Check network connectivity between wiki and BDO servers
+
+## Development
+
+The plugin consists of:
+- `server/server.js`: Server-side backup logic
+- `client/zachup.js`: Client-side UI and controls
+- `factory.json`: Plugin metadata
+- `package.json`: Dependencies and package info
+
+## License
+
+MIT

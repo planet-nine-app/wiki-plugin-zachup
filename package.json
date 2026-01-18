@@ -1,0 +1,36 @@
+{
+  "name": "wiki-plugin-zachup",
+  "version": "0.0.1",
+  "description": "Zachup backup plugin for the federated wiki - backs up all pages to BDO",
+  "keywords": [
+    "wiki",
+    "federated",
+    "backup",
+    "bdo",
+    "planet-nine"
+  ],
+  "homepage": "https://github.com/planet-nine-app/wiki-plugin-zachup#readme",
+  "bugs": {
+    "url": "https://github.com/planet-nine-app/wiki-plugin-zachup/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/planet-nine-app/wiki-plugin-zachup.git"
+  },
+  "license": "MIT",
+  "author": "planetnineisaspaceship",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bdo-js": "latest",
+    "sessionless-node": "latest"
+  },
+  "overrides": {
+    "bdo-js": {
+      "node-fetch": "^2.7.0"
+    }
+  }
+}
